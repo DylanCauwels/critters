@@ -68,11 +68,14 @@ public class Main {
         }
 
         /* Do not alter the code above for your submission. */
-        /* Write your code below. */
-        
-        // System.out.println("GLHF");
-        
-        /* Write your code above */
+        Critter test = null;
+        Craig a = new Craig();
+        try {
+            test.makeCritter("Craig");
+        }
+        catch(InvalidCritterException b) {
+            System.out.print("lel");
+        }
         System.out.flush();
 
     }

@@ -2,16 +2,19 @@ package assignment4;
 /* CRITTERS Critter.java
  * EE422C Project 4 submission by
  * Replace <...> with your actual data.
- * <Student1 Name>
- * <Student1 EID>
- * <Student1 5-digit Unique No.>
- * <Student2 Name>
- * <Student2 EID>
- * <Student2 5-digit Unique No.>
+ * Dylan Cauwels
+ * dmc3692
+ * 15505
+ * Srinjoy Majumdar
+ * uhhhh
+ * 15505
  * Slip days used: <0>
  * Fall 2016
  */
 
+
+import org.omg.CORBA.DynAnyPackage.Invalid;
+import sun.awt.Symbol;
 
 import java.util.List;
 
@@ -51,10 +54,76 @@ public abstract class Critter {
 	private int y_coord;
 	
 	protected final void walk(int direction) {
+		energy -= Params.walk_energy_cost;					//Deducting energy cost from the Critter
+		switch(direction) {									//Moving the Critter in the desired direction
+			case 0:
+				x_coord++;
+				break;
+			case 1:
+				x_coord++;
+				y_coord++;
+				break;
+			case 2:
+				y_coord++;
+				break;
+			case 3:
+				x_coord--;
+				y_coord++;
+				break;
+			case 4:
+				x_coord--;
+				break;
+			case 5:
+				x_coord--;
+				y_coord--;
+				break;
+			case 6:
+				y_coord--;
+				break;
+			case 7:
+				y_coord--;
+				x_coord++;
+				break;
+			default:
+				break;
+		}
+		if(x_coord >= Params.world_width)						//Checking that new coordinates aren't out of bounds
+			x_coord = x_coord - Params.world_width;
+		else if(x_coord < 0)
+			x_coord = x_coord + Params.world_width;
+		if(y_coord >= Params.world_height)
+			y_coord = y_coord - Params.world_height;
+		else if(y_coord < 0)
+			y_coord = y_coord - Params.world_height;
 	}
-	
+
+	//TODO compartmentalize similar functions of run and walk
 	protected final void run(int direction) {
-		
+		energy -= Params.run_energy_cost;					//Deducting energy cost from the Critter
+		switch(direction) {									//Moving the Critter in the desired direction (Only straight lines)
+			case 0:
+				x_coord += 2;
+				break;
+			case 2:
+				y_coord += 2;
+				break;
+			case 4:
+				x_coord -= 2;
+				break;
+			case 6:
+				y_coord -= 2;
+				break;
+			default:
+				break;
+		}
+		if(x_coord >= Params.world_width)						//Checking that new coordinates aren't out of bounds
+			x_coord = x_coord - Params.world_width;
+		else if(x_coord < 0)
+			x_coord = x_coord + Params.world_width;
+		if(y_coord >= Params.world_height)
+			y_coord = y_coord - Params.world_height;
+		else if(y_coord < 0)
+			y_coord = y_coord - Params.world_height;
 	}
 	
 	protected final void reproduce(Critter offspring, int direction) {
@@ -74,6 +143,19 @@ public abstract class Critter {
 	 * @throws InvalidCritterException
 	 */
 	public static void makeCritter(String critter_class_name) throws InvalidCritterException {
+		try {
+			Class classTemp = Class.forName(critter_class_name);
+			Critter obj = (Critter)classTemp.newInstance();
+			population.add(obj);
+			babies.add(obj);
+			//TODO not sure the purpose of the babies list may discover later but Im adding just to be safe
+			obj.energy = Params.start_energy;
+			obj.x_coord = getRandomInt(Params.world_width - 1);
+			obj.y_coord = getRandomInt(Params.world_height - 1);
+		}
+		catch (ClassNotFoundException | InstantiationException | IllegalAccessException a) {
+			throw new InvalidCritterException(critter_class_name);
+		}
 	}
 	
 	/**
@@ -111,7 +193,7 @@ public abstract class Critter {
 		}
 		System.out.println();		
 	}
-	
+
 	/* the TestCritter class allows some critters to "cheat". If you want to 
 	 * create tests of your Critter model, you can create subclasses of this class
 	 * and then use the setter functions contained here. 
@@ -138,7 +220,7 @@ public abstract class Critter {
 		protected int getX_coord() {
 			return super.x_coord;
 		}
-		
+
 		protected int getY_coord() {
 			return super.y_coord;
 		}
@@ -168,11 +250,17 @@ public abstract class Critter {
 	 * Clear the world of all critters, dead and alive
 	 */
 	public static void clearWorld() {
-		// Complete this method.
+		population.clear();
+		babies.clear();
 	}
 	
 	public static void worldTimeStep() {
-		// Complete this method.
+		for (Critter current: population) {
+			current.doTimeStep();
+		}
+		//TODO check for encounters and implement encounter resolution 
+		//TODO add all the babies into the world population and remove them from babies List
+		//TODO apply rest energy penalty to critters and remove those that have dropped below 0 energy
 	}
 	
 	public static void displayWorld() {
