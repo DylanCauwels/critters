@@ -258,9 +258,15 @@ public abstract class Critter {
 		for (Critter current: population) {
 			current.doTimeStep();
 		}
-		//TODO check for encounters and implement encounter resolution 
-		//TODO add all the babies into the world population and remove them from babies List
-		//TODO apply rest energy penalty to critters and remove those that have dropped below 0 energy
+		//TODO check for encounters and implement encounter resolution
+		population.addAll(babies);
+		babies.clear();
+		for (Critter survived: population) {
+			survived.energy -= Params.rest_energy_cost;
+			if(survived.energy < 0) {
+				population.remove(survived);
+			}
+		}
 	}
 	
 	public static void displayWorld() {
