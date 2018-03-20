@@ -16,7 +16,9 @@ package assignment4;
 import org.omg.CORBA.DynAnyPackage.Invalid;
 import sun.awt.Symbol;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Queue;
 
 /* see the PDF for descriptions of the methods and fields in this class
  * you may add fields, methods or inner classes to Critter ONLY if you make your additions private
@@ -55,38 +57,9 @@ public abstract class Critter {
 	
 	protected final void walk(int direction) {
 		energy -= Params.walk_energy_cost;					//Deducting energy cost from the Critter
-		switch(direction) {									//Moving the Critter in the desired direction
-			case 0:
-				x_coord++;
-				break;
-			case 1:
-				x_coord++;
-				y_coord++;
-				break;
-			case 2:
-				y_coord++;
-				break;
-			case 3:
-				x_coord--;
-				y_coord++;
-				break;
-			case 4:
-				x_coord--;
-				break;
-			case 5:
-				x_coord--;
-				y_coord--;
-				break;
-			case 6:
-				y_coord--;
-				break;
-			case 7:
-				y_coord--;
-				x_coord++;
-				break;
-			default:
-				break;
-		}
+		int oldX = x_coord;									//Storing the old coordinates to move the critter on the map
+		int oldY = y_coord;
+		walkCalc(this, direction);
 		if(x_coord >= Params.world_width)						//Checking that new coordinates aren't out of bounds
 			x_coord = x_coord - Params.world_width;
 		else if(x_coord < 0)
@@ -95,11 +68,14 @@ public abstract class Critter {
 			y_coord = y_coord - Params.world_height;
 		else if(y_coord < 0)
 			y_coord = y_coord - Params.world_height;
+		CritterWorld.moveCritter(this, oldX, oldY);
 	}
 
 	//TODO compartmentalize similar functions of run and walk
 	protected final void run(int direction) {
 		energy -= Params.run_energy_cost;					//Deducting energy cost from the Critter
+		int oldX = x_coord;									//Storing the old coordinates to move the critter on the map
+		int oldY = y_coord;
 		switch(direction) {									//Moving the Critter in the desired direction (Only straight lines)
 			case 0:
 				x_coord += 2;
@@ -124,13 +100,57 @@ public abstract class Critter {
 			y_coord = y_coord - Params.world_height;
 		else if(y_coord < 0)
 			y_coord = y_coord - Params.world_height;
+		CritterWorld.moveCritter(this, oldX, oldY);
 	}
 	
 	protected final void reproduce(Critter offspring, int direction) {
+		if(this.energy < Params.min_reproduce_energy)
+			return;
+		offspring.energy = this.energy/2;
+		this.energy /= 2;
+		//TODO figure out how to do their stupid rounding shit
+		babies.add(offspring);
+		offspring.x_coord = x_coord;
+		offspring.y_coord = y_coord;
+		walkCalc(offspring, direction);
 	}
 
+	private static void walkCalc(Critter a, int direction) {
+		switch(direction) {									//Moving the Critter in the desired direction
+			case 0:
+				a.x_coord++;
+				break;
+			case 1:
+				a.x_coord++;
+				a.y_coord++;
+				break;
+			case 2:
+				a.y_coord++;
+				break;
+			case 3:
+				a.x_coord--;
+				a.y_coord++;
+				break;
+			case 4:
+				a.x_coord--;
+				break;
+			case 5:
+				a.x_coord--;
+				a.y_coord--;
+				break;
+			case 6:
+				a.y_coord--;
+				break;
+			case 7:
+				a.y_coord--;
+				a.x_coord++;
+				break;
+			default:
+				break;
+		}
+	}
 	public abstract void doTimeStep();
-	public abstract boolean fight(String oponent);
+	public abstract boolean fight(String opponent);
 	
 	/**
 	 * create and initialize a Critter subclass.
@@ -146,12 +166,11 @@ public abstract class Critter {
 		try {
 			Class classTemp = Class.forName(critter_class_name);
 			Critter obj = (Critter)classTemp.newInstance();
-			population.add(obj);
 			babies.add(obj);
-			//TODO not sure the purpose of the babies list may discover later but Im adding just to be safe
 			obj.energy = Params.start_energy;
 			obj.x_coord = getRandomInt(Params.world_width - 1);
 			obj.y_coord = getRandomInt(Params.world_height - 1);
+			CritterWorld.addCritter(obj);
 		}
 		catch (ClassNotFoundException | InstantiationException | IllegalAccessException a) {
 			throw new InvalidCritterException(critter_class_name);
@@ -258,18 +277,75 @@ public abstract class Critter {
 		for (Critter current: population) {
 			current.doTimeStep();
 		}
-		//TODO check for encounters and implement encounter resolution
-		population.addAll(babies);
-		babies.clear();
+		CritterWorld.resolveConflicts();
 		for (Critter survived: population) {
 			survived.energy -= Params.rest_energy_cost;
 			if(survived.energy < 0) {
 				population.remove(survived);
 			}
 		}
+		for(int i = 0; i < Params.refresh_algae_count; i++) {
+			try {
+				Critter.makeCritter("Algae");
+			} catch(InvalidCritterException a) {
+				System.out.println("lel");
+			}
+		}
+		population.addAll(babies);
+		babies.clear();
 	}
 	
 	public static void displayWorld() {
 		// Complete this method.
+	}
+
+	static class CritterWorld{
+		static ArrayList<Critter>[][] world = new ArrayList[Params.world_width][Params.world_height];
+
+
+		static void resolveConflicts() {
+			for(int i = 0; i < Params.world_width; i++) {
+				for(int j = 0; j < Params.world_height; j++) {
+					if(world[i][j].size() > 1) {
+						resolveConflict(world, i, j);
+					}
+				}
+			}
+		}
+
+		static void resolveConflict(ArrayList[][] world, int x, int y) {
+			while(world[x][y].size() > 1) {
+				Critter a = (Critter)world[x][y].get(0);
+				Critter b = (Critter)world[x][y].get(1);
+				int aEnergy = 0;
+				int bEnergy = 0;
+				if(a.fight(b.toString()))
+					aEnergy = getRandomInt(a.energy);
+				if(b.fight(a.toString()))
+					bEnergy = getRandomInt(b.energy);
+				if(aEnergy >= bEnergy && world[x][y].contains(b)) {					//if bEnergy equals 0 and the b is gone -> no fight, else fight
+					population.remove(b);
+					world[x][y].remove(b);
+					a.energy += b.energy/2;
+				} else if(world[x][y].contains(a) && world[x][y].contains(b)){									//if a is gone then they don't fight anymore
+					population.remove(a);
+					world[x][y].remove(a);
+					b.energy += a.energy/2;
+				}
+				if(x != a.x_coord || y != a.y_coord)
+					moveCritter(a, x, y);
+				if(x != b.x_coord || y != b.y_coord)
+					moveCritter(b, x, y);
+			}
+		}
+
+		public static void moveCritter(Critter a, int oldX, int oldY) {
+			world[oldX][oldY].remove(a);
+			world[a.x_coord][a.y_coord].add(a);
+		}
+
+		static void addCritter(Critter a) {
+			world[a.x_coord][a.y_coord].add(a);
+		}
 	}
 }

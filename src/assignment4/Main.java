@@ -12,6 +12,7 @@ package assignment4;
  * Fall 2016
  */
 
+import java.util.Queue;
 import java.util.Scanner;
 import java.io.*;
 
@@ -45,7 +46,7 @@ public class Main {
         if (args.length != 0) {
             try {
                 inputFile = args[0];
-                kb = new Scanner(new File(inputFile));			
+                kb = new Scanner(new File(inputFile));
             } catch (FileNotFoundException e) {
                 System.out.println("USAGE: java Main OR java Main <input file> <test output>");
                 e.printStackTrace();
@@ -68,15 +69,34 @@ public class Main {
         }
 
         /* Do not alter the code above for your submission. */
-        Critter test = null;
-        Craig a = new Craig();
-        try {
-            test.makeCritter("Craig");
-        }
-        catch(InvalidCritterException b) {
-            System.out.print("lel");
-        }
-        System.out.flush();
+//        Critter test = null;
+//        Craig a = new Craig();
+//        for(int i = 0; i < 5; i++) {
+//            try {
+//                Critter.makeCritter("Craig");
+//            } catch (InvalidCritterException b) {
+//                System.out.print("lel");
+//            }
+//        }
+//        System.out.flush();
 
+        while(true) {
+            String input = kb.next();
+            if(input.equals("quit"))
+                break;
+            else if(input.equals("show"))
+                Critter.displayWorld();
+            else if(input.equals("step")) {
+                int steps = kb.nextInt();
+                for(int i = 0; i < steps; i++) {
+                    Critter.worldTimeStep();
+                }
+            } else if(input.equals("seed")) {
+                int seedNum = kb.nextInt();
+                Critter.setSeed(seedNum);
+            } //TODO make command, stats command
+            //TODO exceptions and errors
+            //TODO Javadoc (kms)
+        }
     }
 }
