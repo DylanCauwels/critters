@@ -297,6 +297,30 @@ public abstract class Critter {
 	
 	public static void displayWorld() {
 		// Complete this method.
+
+		System.out.print("+");
+		for(int i = 0; i<Params.world_width; i++){
+			System.out.print("-");
+		}
+		System.out.print("+");
+		System.out.println();
+		for(int y = 0; y<Params.world_height; y++){
+			System.out.print("|");
+			for(int x = 0; x<Params.world_width;x++){
+				if(CritterWorld.world[x][y] != null && CritterWorld.world[x][y].size()>0){
+					System.out.print((Critter)CritterWorld.world[x][y].get(0));
+				}else{
+					System.out.print(" ");
+				}
+			}
+			System.out.print("|");
+			System.out.println();
+		}
+		System.out.print("+");
+		for(int i = 0; i<Params.world_width; i++){
+			System.out.print("-");
+		}
+		System.out.print("+");
 	}
 
 	static class CritterWorld{
@@ -306,7 +330,7 @@ public abstract class Critter {
 		static void resolveConflicts() {
 			for(int i = 0; i < Params.world_width; i++) {
 				for(int j = 0; j < Params.world_height; j++) {
-					if(world[i][j].size() > 1) {
+					if(world[i][j]!=null && world[i][j].size() > 1) {
 						resolveConflict(world, i, j);
 					}
 				}
