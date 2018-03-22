@@ -6,7 +6,7 @@ package assignment4;
  * dmc3692
  * 15505
  * Srinjoy Majumdar
- * uhhhh
+ * sm64469
  * 15505
  * Slip days used: <0>
  * Fall 2016
@@ -60,14 +60,16 @@ public abstract class Critter {
 		int oldX = x_coord;									//Storing the old coordinates to move the critter on the map
 		int oldY = y_coord;
 		walkCalc(this, direction);
-		if(x_coord >= Params.world_width)						//Checking that new coordinates aren't out of bounds
+		if(x_coord >= Params.world_width) {                        //Checking that new coordinates aren't out of bounds
 			x_coord = x_coord - Params.world_width;
-		else if(x_coord < 0)
+		} else if(x_coord < 0) {
 			x_coord = x_coord + Params.world_width;
-		if(y_coord >= Params.world_height)
+		}
+		if(y_coord >= Params.world_height) {
 			y_coord = y_coord - Params.world_height;
-		else if(y_coord < 0)
-			y_coord = y_coord - Params.world_height;
+		} else if(y_coord < 0){
+			y_coord = y_coord + Params.world_height;
+		}
 		CritterWorld.moveCritter(this, oldX, oldY);
 	}
 
@@ -99,20 +101,20 @@ public abstract class Critter {
 		if(y_coord >= Params.world_height)
 			y_coord = y_coord - Params.world_height;
 		else if(y_coord < 0)
-			y_coord = y_coord - Params.world_height;
+			y_coord = y_coord + Params.world_height;
 		CritterWorld.moveCritter(this, oldX, oldY);
 	}
 	
 	protected final void reproduce(Critter offspring, int direction) {
-		if(this.energy < Params.min_reproduce_energy)
+		if(this.energy < Params.min_reproduce_energy || this.energy <= 0)
 			return;
 		offspring.energy = this.energy/2;
-		this.energy /= 2;
-		//TODO figure out how to do their stupid rounding shit
+		this.energy = this.energy - this.energy/2;  //does this work?? for the rounding
 		babies.add(offspring);
 		offspring.x_coord = x_coord;
 		offspring.y_coord = y_coord;
-		walkCalc(offspring, direction);
+		CritterWorld.addCritter(offspring);
+		offspring.walk(direction);
 	}
 
 	private static void walkCalc(Critter a, int direction) {
@@ -164,15 +166,15 @@ public abstract class Critter {
 	 */
 	public static void makeCritter(String critter_class_name) throws InvalidCritterException {
 		try {
-			Class classTemp = Class.forName(critter_class_name);
+			Class classTemp = Class.forName(myPackage+"."+critter_class_name);
 			Critter obj = (Critter)classTemp.newInstance();
-			babies.add(obj);
 			obj.energy = Params.start_energy;
-			obj.x_coord = getRandomInt(Params.world_width - 1);
-			obj.y_coord = getRandomInt(Params.world_height - 1);
+			obj.x_coord = getRandomInt(Params.world_width);
+			obj.y_coord = getRandomInt(Params.world_height);
 			CritterWorld.addCritter(obj);
+			population.add(obj);
 		}
-		catch (ClassNotFoundException | InstantiationException | IllegalAccessException a) {
+		catch (ClassNotFoundException | InstantiationException | IllegalAccessException | NoClassDefFoundError a) {
 			throw new InvalidCritterException(critter_class_name);
 		}
 	}
@@ -184,8 +186,20 @@ public abstract class Critter {
 	 * @throws InvalidCritterException
 	 */
 	public static List<Critter> getInstances(String critter_class_name) throws InvalidCritterException {
-		List<Critter> result = new java.util.ArrayList<Critter>();
-	
+		List<Critter> result = new ArrayList<Critter>();
+		try{
+			Class classTemp = Class.forName(myPackage+"."+critter_class_name);
+			Critter obj = (Critter)classTemp.newInstance();
+			for(Critter critter: population){
+				if (critter.getClass().equals(classTemp)){
+					result.add(critter);
+				}
+			}
+		}
+		catch (ClassNotFoundException | InstantiationException | IllegalAccessException a) {
+			throw new InvalidCritterException(critter_class_name);
+		}
+
 		return result;
 	}
 	
@@ -271,6 +285,8 @@ public abstract class Critter {
 	public static void clearWorld() {
 		population.clear();
 		babies.clear();
+		CritterWorld.clearWorld();
+
 	}
 	
 	public static void worldTimeStep() {
@@ -278,12 +294,15 @@ public abstract class Critter {
 			current.doTimeStep();
 		}
 		CritterWorld.resolveConflicts();
+		List<Critter> dead = new ArrayList();
 		for (Critter survived: population) {
 			survived.energy -= Params.rest_energy_cost;
 			if(survived.energy < 0) {
-				population.remove(survived);
+				dead.add(survived);
+				CritterWorld.world[survived.x_coord][survived.y_coord].remove(0);
 			}
 		}
+		population.removeAll(dead);
 		for(int i = 0; i < Params.refresh_algae_count; i++) {
 			try {
 				Critter.makeCritter("Algae");
@@ -321,11 +340,19 @@ public abstract class Critter {
 			System.out.print("-");
 		}
 		System.out.print("+");
+		System.out.println();
 	}
 
 	static class CritterWorld{
 		static ArrayList<Critter>[][] world = new ArrayList[Params.world_width][Params.world_height];
 
+		static void clearWorld(){
+			for(int i = 0; i < Params.world_width; i++) {
+				for(int j = 0; j < Params.world_height; j++) {
+					world[i][j] = null;
+				}
+			}
+		}
 
 		static void resolveConflicts() {
 			for(int i = 0; i < Params.world_width; i++) {
@@ -337,38 +364,67 @@ public abstract class Critter {
 			}
 		}
 
+
 		static void resolveConflict(ArrayList[][] world, int x, int y) {
-			while(world[x][y].size() > 1) {
-				Critter a = (Critter)world[x][y].get(0);
-				Critter b = (Critter)world[x][y].get(1);
-				int aEnergy = 0;
-				int bEnergy = 0;
-				if(a.fight(b.toString()))
-					aEnergy = getRandomInt(a.energy);
-				if(b.fight(a.toString()))
-					bEnergy = getRandomInt(b.energy);
-				if(aEnergy >= bEnergy && world[x][y].contains(b)) {					//if bEnergy equals 0 and the b is gone -> no fight, else fight
-					population.remove(b);
-					world[x][y].remove(b);
-					a.energy += b.energy/2;
-				} else if(world[x][y].contains(a) && world[x][y].contains(b)){									//if a is gone then they don't fight anymore
-					population.remove(a);
-					world[x][y].remove(a);
-					b.energy += a.energy/2;
+			while (world[x][y].size() > 1) {
+				Critter a = (Critter) world[x][y].get(0);
+				Critter b = (Critter) world[x][y].get(1);
+				int aRand = 0;
+				int bRand = 0;
+				boolean aFight = a.fight(b.toString());
+				boolean bFight = b.fight(a.toString());
+
+				if (a.energy > 0 && b.energy > 0) {
+					if (a.x_coord == x && a.y_coord == y && b.x_coord == x && b.y_coord == y) {
+						if (aFight) {
+							aRand = getRandomInt(a.energy);
+						}
+						if (bFight) {
+							bRand = getRandomInt(b.energy);
+						}
+						if (aRand >= bRand) {                    //if bEnergy equals 0 and the b is gone -> no fight, else fight
+							population.remove(b);
+							world[x][y].remove(b);
+							a.energy += b.energy / 2;
+						} else {                                    //if a is gone then they don't fight anymore
+							population.remove(a);
+							world[x][y].remove(a);
+							b.energy += a.energy / 2;
+						}
+					} else { //Critters moved
+						moveCritter(a, x, y);
+						moveCritter(b, x, y);
+					}
+				} else { //Critters died trying to move or were dead already
+					if (a.energy <= 0) {
+						population.remove(a);
+						world[x][y].remove(a);
+					} else {
+						moveCritter(a, x, y);
+					}
+					if (b.energy <= 0) {
+						population.remove(b);
+						world[x][y].remove(b);
+					} else {
+						moveCritter(b, x, y);
+					}
 				}
-				if(x != a.x_coord || y != a.y_coord)
-					moveCritter(a, x, y);
-				if(x != b.x_coord || y != b.y_coord)
-					moveCritter(b, x, y);
+
 			}
 		}
 
 		public static void moveCritter(Critter a, int oldX, int oldY) {
-			world[oldX][oldY].remove(a);
-			world[a.x_coord][a.y_coord].add(a);
+//			if(world[oldX][oldY]!=null){
+				world[oldX][oldY].remove(a);
+//			}
+			addCritter(a);
+//			world[a.x_coord][a.y_coord].add(a);
 		}
 
 		static void addCritter(Critter a) {
+			if(world[a.x_coord][a.y_coord]==null){
+				world[a.x_coord][a.y_coord] = new ArrayList<Critter>();
+			}
 			world[a.x_coord][a.y_coord].add(a);
 		}
 	}

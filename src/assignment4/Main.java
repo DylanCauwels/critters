@@ -16,6 +16,8 @@ import java.util.Queue;
 import java.util.Scanner;
 import java.io.*;
 
+import java.lang.reflect.Method;
+import java.util.List;
 
 /*
  * Usage: java <pkgname>.Main <input file> test
@@ -42,7 +44,7 @@ public class Main {
      * @param args args can be empty.  If not empty, provide two parameters -- the first is a file name, 
      * and the second is test (for test output, where all output to be directed to a String), or nothing.
      */
-    public static void main(String[] args) { 
+    public static void main(String[] args) {
         if (args.length != 0) {
             try {
                 inputFile = args[0];
@@ -69,34 +71,87 @@ public class Main {
         }
 
         /* Do not alter the code above for your submission. */
-//        Critter test = null;
-//        Craig a = new Craig();
-//        for(int i = 0; i < 5; i++) {
-//            try {
-//                Critter.makeCritter("Craig");
-//            } catch (InvalidCritterException b) {
-//                System.out.print("lel");
-//            }
-//        }
-//        System.out.flush();
 
-        while(true) {
-            String input = kb.next();
-            if(input.equals("quit"))
-                break;
-            else if(input.equals("show"))
-                Critter.displayWorld();
-            else if(input.equals("step")) {
-                int steps = kb.nextInt();
-                for(int i = 0; i < steps; i++) {
-                    Critter.worldTimeStep();
+        while (true) {
+            String line = kb.nextLine();
+            Scanner ls = new Scanner(line.trim());
+            String input = ls.next();
+            if (input.equals("quit")) {
+                if (!ls.hasNext()) {
+                    break;
+                } else {
+                    System.out.println("error processing: " + line);
                 }
-            } else if(input.equals("seed")) {
-                int seedNum = kb.nextInt();
-                Critter.setSeed(seedNum);
-            } //TODO make command, stats command
+            } else if (input.equals("show")) {
+                if (!ls.hasNext()) {
+                    Critter.displayWorld();
+                } else {
+                    System.out.println("error processing: " + line);
+                }
+            } else if (input.equals("step")) {
+                int steps;
+                if (ls.hasNextInt()) {
+                    steps = ls.nextInt();
+                } else {
+                    steps = 1;
+                }
+                if (!ls.hasNext()) {
+                    for (int i = 0; i < steps; i++) {
+                        Critter.worldTimeStep();
+                    }
+                } else {
+                    System.out.println("error processing: " + line );
+                }
+
+            } else if (input.equals("seed")) {
+                int seedNum = ls.nextInt();
+                if (!ls.hasNext()) {
+                    Critter.setSeed(seedNum);
+                } else {
+                    System.out.println("error processing: " + line );
+                }
+            } else if (input.equals("make")) {
+                String critter_name = ls.next();
+                int count = 1;
+                if (ls.hasNextInt()) {
+                    count = ls.nextInt();
+                }
+                if (!ls.hasNext()) {
+                    for (int i = 0; i < count; i++) {
+                        try {
+                            Critter.makeCritter(critter_name);
+                        } catch (InvalidCritterException a) {
+                            System.out.println("error processing: " + line);
+                            break;
+                        }
+                    }
+                } else {
+                    System.out.println("error processing: " + line);
+                }
+
+
+            } else if (input.equals("stats")) {
+                String critter_name = ls.next();
+                if (!ls.hasNext()) {
+                    try {
+                        Class classTemp = Class.forName(myPackage + "." + critter_name);
+                        Method m = classTemp.getMethod("runStats", List.class);
+                        List<Critter> instances = Critter.getInstances(critter_name);
+                        m.invoke(null, instances);
+                    } catch (Exception e) {
+                        System.out.println("error processing: " + line);
+                    }
+                } else {
+                    System.out.println("error processing: " + line);
+                }
+
+            } else {
+                System.out.println("invalid command: " + line);
+            }
+        }
+
             //TODO exceptions and errors
             //TODO Javadoc (kms)
-        }
+
     }
 }
