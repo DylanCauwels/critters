@@ -75,7 +75,15 @@ public class Main {
         while (true) {
             String line = kb.nextLine();
             Scanner ls = new Scanner(line.trim());
-            String input = ls.next();
+            String input;
+
+            if(ls.hasNext()){
+                input = ls.next();
+            }else{
+                System.out.println("invalid command");
+                continue;
+            }
+
             if (input.equals("quit")) {
                 if (!ls.hasNext()) {
                     break;
