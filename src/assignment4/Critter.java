@@ -25,7 +25,6 @@ import java.util.Queue;
  * no new public, protected or default-package code or data can be added to Critter
  */
 
-
 public abstract class Critter {
 	private static String myPackage;
 	private	static List<Critter> population = new java.util.ArrayList<Critter>();
@@ -56,6 +55,7 @@ public abstract class Critter {
 	private int y_coord;
 
 	private boolean hasMoved = false;
+	private boolean inFight = false;
 	
 	protected final void walk(int direction) {
 		energy -= Params.walk_energy_cost; //Deducting energy cost from the Critter
@@ -64,16 +64,11 @@ public abstract class Critter {
 
 			int oldX = x_coord;									//Storing the old coordinates to move the critter on the map
 			int oldY = y_coord;
-			walkCalc(this, direction);
-			if(x_coord >= Params.world_width) {                        //Checking that new coordinates aren't out of bounds
-				x_coord = x_coord - Params.world_width;
-			} else if(x_coord < 0) {
-				x_coord = x_coord + Params.world_width;
-			}
-			if(y_coord >= Params.world_height) {
-				y_coord = y_coord - Params.world_height;
-			} else if(y_coord < 0){
-				y_coord = y_coord + Params.world_height;
+			calcCoord(this, direction, 1);
+
+			if(inFight && CritterWorld.world[x_coord][y_coord].size()>0){
+				x_coord = oldX;
+				y_coord = oldY;
 			}
 			CritterWorld.moveCritter(this, oldX, oldY);
 		}
@@ -85,30 +80,12 @@ public abstract class Critter {
 		if(!hasMoved) {
 			int oldX = x_coord;                                    //Storing the old coordinates to move the critter on the map
 			int oldY = y_coord;
-			switch (direction) {                                    //Moving the Critter in the desired direction (Only straight lines)
-				case 0:
-					x_coord += 2;
-					break;
-				case 2:
-					y_coord += 2;
-					break;
-				case 4:
-					x_coord -= 2;
-					break;
-				case 6:
-					y_coord -= 2;
-					break;
-				default:
-					break;
+			calcCoord(this, direction, 2);
+
+			if(inFight && CritterWorld.world[x_coord][y_coord] != null && CritterWorld.world[x_coord][y_coord].size()>0){
+				x_coord = oldX;
+				y_coord = oldY;
 			}
-			if (x_coord >= Params.world_width)                        //Checking that new coordinates aren't out of bounds
-				x_coord = x_coord - Params.world_width;
-			else if (x_coord < 0)
-				x_coord = x_coord + Params.world_width;
-			if (y_coord >= Params.world_height)
-				y_coord = y_coord - Params.world_height;
-			else if (y_coord < 0)
-				y_coord = y_coord + Params.world_height;
 			CritterWorld.moveCritter(this, oldX, oldY);
 		}
 	}
@@ -125,38 +102,48 @@ public abstract class Critter {
 		offspring.walk(direction);
 	}
 
-	private static void walkCalc(Critter a, int direction) {
+	private static void calcCoord(Critter a, int direction, int increment) {
 		switch(direction) {									//Moving the Critter in the desired direction
 			case 0:
-				a.x_coord++;
+				a.x_coord+=increment;
 				break;
 			case 1:
-				a.x_coord++;
-				a.y_coord++;
+				a.x_coord+=increment;
+				a.y_coord+=increment;
 				break;
 			case 2:
-				a.y_coord++;
+				a.y_coord+=increment;
 				break;
 			case 3:
-				a.x_coord--;
-				a.y_coord++;
+				a.x_coord-=increment;
+				a.y_coord+=increment;
 				break;
 			case 4:
-				a.x_coord--;
+				a.x_coord-=increment;
 				break;
 			case 5:
-				a.x_coord--;
-				a.y_coord--;
+				a.x_coord-=increment;
+				a.y_coord-=increment;
 				break;
 			case 6:
-				a.y_coord--;
+				a.y_coord-=increment;
 				break;
 			case 7:
-				a.y_coord--;
-				a.x_coord++;
+				a.y_coord-=increment;
+				a.x_coord+=increment;
 				break;
 			default:
 				break;
+		}
+		if (a.x_coord >= Params.world_width) {                        //Checking that new coordinates aren't out of bounds
+			a.x_coord = a.x_coord - Params.world_width;
+		} else if (a.x_coord < 0){
+			a.x_coord = a.x_coord + Params.world_width;
+		}
+		if (a.y_coord >= Params.world_height) {
+			a.y_coord = a.y_coord - Params.world_height;
+		} else if (a.y_coord < 0){
+			a.y_coord = a.y_coord + Params.world_height;
 		}
 	}
 	public abstract void doTimeStep();
@@ -251,11 +238,16 @@ public abstract class Critter {
 		}
 		
 		protected void setX_coord(int new_x_coord) {
+			int old_x_coord = super.x_coord;
 			super.x_coord = new_x_coord;
+			CritterWorld.moveCritter(this, old_x_coord, super.y_coord);
+
 		}
 		
 		protected void setY_coord(int new_y_coord) {
+			int old_y_coord = super.y_coord;
 			super.y_coord = new_y_coord;
+			CritterWorld.moveCritter(this, super.x_coord, old_y_coord);
 		}
 		
 		protected int getX_coord() {
@@ -379,8 +371,12 @@ public abstract class Critter {
 				Critter b = (Critter) world[x][y].get(1);
 				int aRand = 0;
 				int bRand = 0;
+				a.inFight = true;
+				b.inFight = true;
 				boolean aFight = a.fight(b.toString());
 				boolean bFight = b.fight(a.toString());
+				a.inFight = false;
+				b.inFight = false;
 
 				if (a.energy > 0 && b.energy > 0) {
 					if (a.x_coord == x && a.y_coord == y && b.x_coord == x && b.y_coord == y) {
@@ -399,22 +395,15 @@ public abstract class Critter {
 							world[x][y].remove(a);
 							b.energy += a.energy / 2;
 						}
-					} else { //Critters moved
-						moveCritter(a, x, y);
-						moveCritter(b, x, y);
 					}
 				} else { //Critters died trying to move or were dead already
 					if (a.energy <= 0) {
 						population.remove(a);
 						world[x][y].remove(a);
-					} else {
-						moveCritter(a, x, y);
 					}
 					if (b.energy <= 0) {
 						population.remove(b);
 						world[x][y].remove(b);
-					} else {
-						moveCritter(b, x, y);
 					}
 				}
 
