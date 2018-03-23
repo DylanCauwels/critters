@@ -361,7 +361,9 @@ public abstract class Critter {
 			survived.energy -= Params.rest_energy_cost;
 			if(survived.energy < 0) {
 				dead.add(survived);
-				CritterWorld.world[survived.x_coord][survived.y_coord].remove(0);
+				if(CritterWorld.world[survived.x_coord][survived.y_coord].size()>1){
+					CritterWorld.world[survived.x_coord][survived.y_coord].remove(0);
+				}
 			}
 		}
 		population.removeAll(dead);

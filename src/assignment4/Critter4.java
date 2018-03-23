@@ -16,7 +16,7 @@ public class Critter4 extends Critter {
 	 */
 	@Override
 	public void doTimeStep() {
-		if(getRandomInt(9) == 9 && getEnergy() > 50) {
+		if(getRandomInt(9) == 9 && getEnergy() > 150) {
 			reproduce(new Critter4(), getRandomInt(7));
 		} else {
 			run(getRandomInt(7));
