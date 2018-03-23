@@ -1,25 +1,28 @@
 package assignment4;
 
-import java.util.*;
-
-public class Steve extends Critter.TestCritter {
+//Snek
+public class Critter4 extends Critter.TestCritter {
 
 	@Override
 	public void doTimeStep() {
-		walk(0);
+		if(getRandomInt(9) == 9) {
+			reproduce(new Critter4(), getRandomInt(7));
+		} else {
+			int integer = getRandomInt(8);                                  //always run never walk
+			if(integer % 2 == 1) {
+				run(integer - 1);
+			} else {
+				run(integer);
+			}
+		}
 	}
 
 	@Override
-	public boolean fight(String opponent) {
-		if (getEnergy() > 10) return true;
-		return false;
+	public boolean fight(String opponent) {										//very contentious animals
+		return true;
 	}
 	
 	public String toString() {
 		return "S";
-	}
-	
-	public void test (List<Critter> l) {
-		
 	}
 }

@@ -1,11 +1,12 @@
 package assignment4;
 
-public class Rabbit extends Critter{
+//Rabbit
+public class Critter1 extends Critter{
 
     @Override
     public void doTimeStep() {
         if(getEnergy() > Params.rest_energy_cost + Params.min_reproduce_energy)
-            reproduce(new Rabbit(), getRandomInt(7));                       //Reproducing like rabbits
+            reproduce(new Critter1(), getRandomInt(7));                       //Reproducing like rabbits
         else {
             int integer = getRandomInt(8);                                  //always run never walk
             if(integer % 2 == 1) {
